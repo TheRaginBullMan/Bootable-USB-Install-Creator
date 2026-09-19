@@ -850,3 +850,6 @@ finally {
     # wherever RunAs started it).
     Set-Location -LiteralPath $ScriptDir -ErrorAction SilentlyContinue
 }
+
+write-host -NoNewLine "Press Any Key To Continue" -BackgroundColor Gray -ForegroundColor Black
+$null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown");
