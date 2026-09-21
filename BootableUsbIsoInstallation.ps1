@@ -9,7 +9,9 @@
     - No ISO given: partitions and formats the drive, labels it 'BootableUsb', and ends
     - Windows ISO: labels the drive after the media ('Windows 11', 'Windows 10',
       'WinSrv 2025', ...), copies Windows Setup, and splits install.wim with DISM
-      when it exceeds the FAT32 4 GB file limit, per Microsoft's procedure
+      when it exceeds the FAT32 4 GB file limit, per Microsoft's procedure, then
+      writes sources\ei.cfg (empty EditionID, Retail channel) so Setup prompts
+      for the edition to install
     - Other ISO (Linux etc.): labels the drive after the distribution when it can be
       identified from the media, otherwise after the ISO's own volume label, then
       copies the full ISO contents
@@ -815,6 +817,22 @@ try {
             }
             Remove-Item -LiteralPath $logOut, $logErr -ErrorAction SilentlyContinue
         }
+    }
+
+    # --------------------------------------------------------
+    # Windows only: write sources\ei.cfg once everything else is on the
+    # drive. An empty EditionID makes Setup ask which edition to install
+    # instead of choosing one from the firmware/product key.
+    # --------------------------------------------------------
+    if ($media.Kind -eq 'Windows' -and $media.ImagePath) {
+        Write-Step "Creating sources\ei.cfg..."
+        $eiCfgPath = "${usbLetter}:\sources\ei.cfg"
+        $eiCfg     = "[EditionID]`r`n`r`n[Channel]`r`nRetail`r`n`r`n[VL]`r`n0`r`n"
+        [System.IO.File]::WriteAllText($eiCfgPath, $eiCfg, [System.Text.Encoding]::ASCII)
+        if (-not (Test-Path -LiteralPath $eiCfgPath -PathType Leaf)) {
+            Write-Fatal "Failed to create $eiCfgPath."
+        }
+        Write-Info "Created $eiCfgPath"
     }
 
     $bootMode = if ($media.Kind -eq 'Windows') { 'UEFI and legacy BIOS (FAT32 + active partition)' }
